@@ -416,3 +416,295 @@
     color: #94a3b8;
     font-size: 14px;
 }
+
+/* Post Types Settings Card */
+.zoro-settings-card {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 16px 22px;
+    margin-bottom: 22px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+    direction: rtl;
+}
+
+.zoro-settings-title {
+    font-size: 13.5px;
+    color: #1e293b;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.zoro-post-types-selection {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.zoro-checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #334155;
+    cursor: pointer;
+    background: #f8fafc;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    transition: all 0.2s ease;
+}
+
+.zoro-checkbox-label:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.zoro-checkbox-label input[type="checkbox"] {
+    margin: 0;
+}
+
+.zoro-checkbox-label code {
+    font-size: 11px;
+    color: #64748b;
+    background: transparent;
+    padding: 0;
+}
+
+/* Post Type Badges */
+.badge-post-type {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.badge-type-post {
+    background: #e2e8f0;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+
+.badge-type-page {
+    background: #ccfbf1;
+    color: #0f766e;
+    border: 1px solid #99f6e4;
+}
+
+.badge-type-product {
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fed7aa;
+}
+
+/* In-Editor Meta Box Styles */
+.zoro-metabox-wrap {
+    direction: rtl;
+    font-family: inherit;
+    color: #1e293b;
+    padding: 6px 0;
+}
+
+.zoro-metabox-empty {
+    padding: 10px 0;
+}
+
+.zoro-metabox-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    padding: 14px 18px;
+    border-radius: 8px;
+    color: #166534;
+    font-size: 13px;
+}
+
+.zoro-metabox-notice .dashicons {
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: #16a34a;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.zoro-metabox-status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.zoro-metabox-role {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.zoro-metabox-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.zoro-metabox-counters {
+    display: flex;
+    gap: 10px;
+}
+
+.zoro-metabox-alert {
+    display: flex;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 18px;
+    align-items: flex-start;
+}
+
+.zoro-metabox-alert.alert-orphan {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+.zoro-alert-icon {
+    font-size: 20px;
+    line-height: 1.2;
+    flex-shrink: 0;
+}
+
+.zoro-alert-text {
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.zoro-alert-text strong {
+    display: block;
+    font-size: 13.5px;
+    margin-bottom: 3px;
+}
+
+.zoro-metabox-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.zoro-metabox-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.zoro-metabox-section h4 {
+    margin: 0 0 10px 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.zoro-metabox-section h4 .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: #2271b1;
+}
+
+.zoro-hint-note {
+    font-size: 12px;
+    color: #64748b;
+    margin: 0 0 10px 0;
+}
+
+.zoro-empty-note {
+    font-size: 12.5px;
+    color: #94a3b8;
+    margin: 0;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 6px;
+}
+
+.zoro-metabox-link-list,
+.zoro-metabox-suggestions-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.zoro-metabox-link-list li,
+.zoro-metabox-suggestions-list li {
+    padding: 9px 12px;
+    border-radius: 6px;
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    margin-bottom: 7px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.zoro-metabox-link-list li:hover,
+.zoro-metabox-suggestions-list li:hover {
+    background: #f1f5f9;
+}
+
+.zoro-link-source a,
+.zoro-sug-title a {
+    color: #1e40af;
+    font-weight: 600;
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.zoro-link-source a:hover,
+.zoro-sug-title a:hover {
+    text-decoration: underline;
+}
+
+.zoro-link-anchor {
+    font-size: 12px;
+    color: #475569;
+}
+
+.zoro-link-anchor code {
+    background: #e2e8f0;
+    color: #1e293b;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11.5px;
+}
+
+.zoro-link-more {
+    font-size: 12px;
+    color: #64748b;
+    justify-content: center !important;
+    background: transparent !important;
+    border: none !important;
+}
+
+.zoro-sug-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+

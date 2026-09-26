@@ -1,5 +1,5 @@
 /**
- * EX SEO Cluster & Internal Link Analyzer - Admin Scripts
+ * Zoro SEO & Internal Link Analyzer - Admin Scripts
  */
 
 (function($) {
@@ -10,26 +10,70 @@
         let activePostDetails = null;
 
         // Elements
-        const $startScanBtn   = $('#ex-seo-btn-start-scan');
-        const $progressBox    = $('#ex-seo-scan-progress');
-        const $progressBar    = $('#ex-seo-progress-fill');
-        const $progressText   = $('#ex-seo-progress-text');
-        const $searchInput    = $('#ex-seo-search-input');
-        const $categoryFilter = $('#ex-seo-category-filter');
-        const $roleFilter     = $('#ex-seo-role-filter');
-        const $tableRows      = $('.ex-seo-table tbody tr');
+        const $startScanBtn    = $('#ex-seo-btn-start-scan');
+        const $progressBox     = $('#ex-seo-scan-progress');
+        const $progressBar     = $('#ex-seo-progress-fill');
+        const $progressText    = $('#ex-seo-progress-text');
+        const $searchInput     = $('#ex-seo-search-input');
+        const $postTypeFilter  = $('#ex-seo-post-type-filter');
+        const $categoryFilter  = $('#ex-seo-category-filter');
+        const $roleFilter      = $('#ex-seo-role-filter');
+        const $tableRows       = $('.ex-seo-table tbody tr');
+
+        // Helper to collect checked post types
+        function getSelectedPostTypes() {
+            const types = [];
+            $('#zoro-post-types-container input[type="checkbox"]:checked').each(function() {
+                types.push($(this).val());
+            });
+            return types.length > 0 ? types : ['post'];
+        }
+
+        // Save Post Types Settings
+        $('#zoro-btn-save-settings').on('click', function(e) {
+            e.preventDefault();
+            const $btn = $(this);
+            const selectedTypes = getSelectedPostTypes();
+
+            $btn.prop('disabled', true).text('در حال ذخیره...');
+
+            $.ajax({
+                url: localized.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'ex_seo_cluster_save_settings',
+                    nonce: localized.nonce,
+                    post_types: selectedTypes
+                },
+                success: function(res) {
+                    $btn.prop('disabled', false).text('ذخیره تنظیمات انواع محتوا');
+                    if (res.success) {
+                        $('#zoro-settings-saved-feedback').fadeIn(200).delay(2000).fadeOut(300);
+                    } else {
+                        alert(res.data && res.data.message ? res.data.message : 'خطا در ذخیره تنظیمات');
+                    }
+                },
+                error: function() {
+                    $btn.prop('disabled', false).text('ذخیره تنظیمات انواع محتوا');
+                    alert('خطای ارتباط با سرور هنگام ذخیره تنظیمات.');
+                }
+            });
+        });
 
         // Start / Re-run Scan
         $startScanBtn.on('click', function(e) {
             e.preventDefault();
 
-            if (!confirm('آیا می‌خواهید اسکن مقالات و لینک‌های داخلی وبسایت آغاز شود؟')) {
+            const postTypes = getSelectedPostTypes();
+            const typesLabel = postTypes.join(', ');
+
+            if (!confirm(`آیا می‌خواهید اسکن و تحلیل لینک‌های داخلی وبسایت برای (${typesLabel}) آغاز شود؟`)) {
                 return;
             }
 
             $startScanBtn.prop('disabled', true).addClass('updating-message');
             $progressBox.slideDown();
-            updateProgress(0, 'در حال بارگذاری و فهرست‌بندی مقالات...');
+            updateProgress(0, 'در حال بارگذاری و فهرست‌بندی محتوا...');
 
             // Step 1: Initialize Scan
             $.ajax({
@@ -38,7 +82,7 @@
                 data: {
                     action: 'ex_seo_cluster_start_scan',
                     nonce: localized.nonce,
-                    post_types: $('#ex-seo-post-types-select').val() || ['post']
+                    post_types: postTypes
                 },
                 success: function(res) {
                     if (!res.success) {
@@ -51,7 +95,7 @@
                     const totalPosts = postIds.length;
 
                     if (totalPosts === 0) {
-                        alert('هیچ مقاله‌ای برای اسکن یافت نشد.');
+                        alert('هیچ محتوایی برای اسکن یافت نشد.');
                         resetScanState();
                         return;
                     }
@@ -68,7 +112,7 @@
 
                         const batch = postIds.slice(currentIndex, currentIndex + batchSize);
                         const percent = Math.round((currentIndex / totalPosts) * 90);
-                        updateProgress(percent, `در حال تحلیل محتوا و استخراج لینک‌ها (${currentIndex} از ${totalPosts} مقاله)...`);
+                        updateProgress(percent, `در حال تحلیل محتوا و استخراج لینک‌ها (${currentIndex} از ${totalPosts} مورد)...`);
 
                         $.ajax({
                             url: localized.ajax_url,
@@ -144,18 +188,25 @@
         // Live Table Filtering
         function filterTable() {
             const query    = ($searchInput.val() || '').trim().toLowerCase();
+            const postType = $postTypeFilter.val();
             const category = $categoryFilter.val();
             const role     = $roleFilter.val();
 
             $tableRows.each(function() {
-                const $row      = $(this);
-                const title     = ($row.data('title') || '').toString().toLowerCase();
-                const rowCat    = ($row.data('category') || '').toString();
-                const rowRole   = ($row.data('role') || '').toString();
+                const $row     = $(this);
+                const title    = ($row.data('title') || '').toString().toLowerCase();
+                const rowCat   = ($row.data('category') || '').toString();
+                const rowRole  = ($row.data('role') || '').toString();
+                const rowType  = ($row.data('post-type') || '').toString();
 
                 let matchSearch = true;
                 if (query.length > 0) {
                     matchSearch = title.includes(query);
+                }
+
+                let matchType = true;
+                if (postType && postType !== 'all') {
+                    matchType = (rowType === postType);
                 }
 
                 let matchCat = true;
@@ -168,7 +219,7 @@
                     matchRole = (rowRole === role);
                 }
 
-                if (matchSearch && matchCat && matchRole) {
+                if (matchSearch && matchType && matchCat && matchRole) {
                     $row.show();
                 } else {
                     $row.hide();
@@ -177,6 +228,9 @@
         }
 
         $searchInput.on('input', filterTable);
+        if ($postTypeFilter.length) {
+            $postTypeFilter.on('change', filterTable);
+        }
         $categoryFilter.on('change', filterTable);
         $roleFilter.on('change', filterTable);
 
@@ -208,7 +262,8 @@
                     const post = res.data;
                     activePostDetails = post;
 
-                    $('#ex-seo-modal-post-title').text(post.title);
+                    const typeBadge = post.post_type_label ? `<span class="badge-post-type badge-type-${post.post_type}" style="margin-left: 6px;">${post.post_type_label}</span>` : '';
+                    $('#ex-seo-modal-post-title').html(`${typeBadge} ${escapeHtml(post.title)}`);
                     $('#modal-tab-inlinks-count').text(`(${post.inlinks.length})`);
                     $('#modal-tab-outlinks-count').text(`(${post.outlinks.length})`);
 
@@ -232,7 +287,7 @@
                         });
                         $('#ex-seo-inlinks-list').html(html);
                     } else {
-                        $('#ex-seo-inlinks-list').html('<li class="ex-seo-empty-message">هیچ مقاله دیگری به این مقاله لینک نداده است (مقاله یتیم).</li>');
+                        $('#ex-seo-inlinks-list').html('<li class="ex-seo-empty-message">هیچ مطلب دیگری به این صفحه لینک نداده است (صفحه یتیم).</li>');
                     }
 
                     // Render Outlinks
@@ -255,7 +310,7 @@
                         });
                         $('#ex-seo-outlinks-list').html(html);
                     } else {
-                        $('#ex-seo-outlinks-list').html('<li class="ex-seo-empty-message">این مقاله به هیچ مقاله داخلی دیگری لینک نداده است (بن‌بست).</li>');
+                        $('#ex-seo-outlinks-list').html('<li class="ex-seo-empty-message">این مطلب به هیچ مطلب داخلی دیگری لینک نداده است (بن‌بست).</li>');
                     }
                 },
                 error: function() {

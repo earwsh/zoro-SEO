@@ -184,4 +184,81 @@ assert(strpos($tree_html, 'اصول بازاریابی محتوایی') !== fals
 assert(strpos($tree_html, 'nodeDrawer') !== false, "Must contain interactive drawer");
 echo " -> Passed!\n\n";
 
+// Test 6: Elementor JSON Extraction Verification
+echo "Test 6: Elementor JSON Data Link Extraction...\n";
+$mock_elementor_data = json_encode(array(
+    array(
+        'elType' => 'section',
+        'elements' => array(
+            array(
+                'elType' => 'column',
+                'elements' => array(
+                    array(
+                        'elType' => 'widget',
+                        'widgetType' => 'text-editor',
+                        'settings' => array(
+                            'editor' => '<p>مطالعه بیشتر درباره <a href="/seo-guide/">پیلار جامع سئو</a> در سایت.</p>'
+                        )
+                    ),
+                    array(
+                        'elType' => 'widget',
+                        'widgetType' => 'button',
+                        'settings' => array(
+                            'text' => 'مشاهده کلمات کلیدی',
+                            'link' => array(
+                                'url' => 'https://mysite.com/keyword-research/',
+                                'is_external' => '',
+                                'nofollow' => ''
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    )
+));
+
+$extracted_elementor_html = $scanner->extract_content_from_elementor($mock_elementor_data);
+assert(!empty($extracted_elementor_html), "Elementor HTML extraction should not be empty");
+$elementor_links = $scanner->extract_links_from_html($extracted_elementor_html, 'https://mysite.com/some-page/');
+assert(count($elementor_links) === 2, "Expected 2 links from Elementor content, got " . count($elementor_links));
+assert($elementor_links[0]['anchor_text'] === 'پیلار جامع سئو');
+assert($elementor_links[1]['anchor_text'] === 'مشاهده کلمات کلیدی');
+echo " -> Passed!\n\n";
+
+// Test 7: Incremental Single Post Update & Removal
+echo "Test 7: Incremental Single Post Update & Removal...\n";
+$new_scanned_post = array(
+    'id'                   => 6,
+    'title'                => 'درباره ما و خدمات (برگه)',
+    'url'                  => 'https://mysite.com/about-us/',
+    'normalized_url'       => $scanner->normalize_url('https://mysite.com/about-us/'),
+    'post_type'            => 'page',
+    'word_count'           => 600,
+    'categories'           => array('برگه‌های سایت'),
+    'publish_date'         => '2026-03-01',
+    'outlinks'             => array(
+        array('raw_url' => 'https://mysite.com/content-marketing/', 'normalized_url' => $scanner->normalize_url('https://mysite.com/content-marketing/'), 'anchor_text' => 'اصول بازاریابی', 'is_nofollow' => false),
+    ),
+    'total_outlinks_count' => 1
+);
+
+// Post 4 was an orphan (0 inlinks). Now Post 6 links to Post 4!
+$updated_analysis = $analyzer->update_single_post($mock_posts, $new_scanned_post);
+$updated_posts = array();
+foreach ($updated_analysis['posts'] as $p) {
+    $updated_posts[$p['id']] = $p;
+}
+
+assert($updated_analysis['summary']['total_posts'] === 6, "Total posts should now be 6");
+assert($updated_posts[4]['inlinks_count'] === 1, "Post 4 should now have 1 inlink, no longer an orphan!");
+assert($updated_posts[4]['role'] !== 'orphan', "Post 4 should no longer be an orphan!");
+assert($updated_posts[6]['post_type'] === 'page', "Post 6 post type should be 'page'");
+assert($updated_posts[6]['post_type_label'] === 'برگه', "Post 6 post type label should be 'برگه'");
+
+// Now test removal of Post 6
+$removed_analysis = $analyzer->remove_single_post($updated_analysis['posts'], 6);
+assert($removed_analysis['summary']['total_posts'] === 5, "Total posts should return to 5 after removal");
+echo " -> Passed!\n\n";
+
 echo "=== All Tests Passed Successfully! ===\n";

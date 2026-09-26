@@ -129,10 +129,19 @@ class EX_SEO_Cluster_Analyzer {
         $dead_ends_count = 0;
         $pillars_count = 0;
         $clusters_count = 0;
+        $post_types_counts = array();
 
         foreach ($posts_by_id as $id => &$p) {
             $in = $p['inlinks_count'];
             $out = $p['total_outlinks_count'];
+            $post_type = isset($p['post_type']) ? $p['post_type'] : 'post';
+            $p['post_type'] = $post_type;
+            $p['post_type_label'] = $this->get_post_type_label($post_type);
+
+            if (!isset($post_types_counts[$post_type])) {
+                $post_types_counts[$post_type] = 0;
+            }
+            $post_types_counts[$post_type]++;
 
             if ($in === 0) {
                 $role = 'orphan'; // یتیم
@@ -185,13 +194,15 @@ class EX_SEO_Cluster_Analyzer {
                     $categories_data[$cat]['orphans_count']++;
                 }
                 $categories_data[$cat]['posts'][] = array(
-                    'id'            => $p['id'],
-                    'title'         => $p['title'],
-                    'url'           => $p['url'],
-                    'inlinks_count' => $p['inlinks_count'],
-                    'outlinks_count'=> $p['total_outlinks_count'],
-                    'word_count'    => $p['word_count'],
-                    'role'          => $p['role'],
+                    'id'              => $p['id'],
+                    'title'           => $p['title'],
+                    'url'             => $p['url'],
+                    'post_type'       => $p['post_type'],
+                    'post_type_label' => $p['post_type_label'],
+                    'inlinks_count'   => $p['inlinks_count'],
+                    'outlinks_count'  => $p['total_outlinks_count'],
+                    'word_count'      => $p['word_count'],
+                    'role'            => $p['role'],
                 );
             }
         }
@@ -224,7 +235,8 @@ class EX_SEO_Cluster_Analyzer {
             'pillars_count'        => $pillars_count,
             'clusters_count'       => $clusters_count,
             'categories_count'     => count($categories_data),
-            'scan_time'            => current_time('mysql'),
+            'post_types'           => $post_types_counts,
+            'scan_time'            => function_exists('current_time') ? current_time('mysql') : date('Y-m-d H:i:s'),
         );
 
         return array(
@@ -233,6 +245,82 @@ class EX_SEO_Cluster_Analyzer {
             'categories' => $categories_data,
             'matrix'     => $link_matrix,
         );
+    }
+
+    /**
+     * Incrementally update or insert a single post into an existing dataset
+     *
+     * @param array $existing_scanned_posts Scanned posts raw list
+     * @param array $scanned_post Newly scanned single post data
+     * @return array Updated full analysis report
+     */
+    public function update_single_post($existing_scanned_posts, $scanned_post) {
+        if (!is_array($existing_scanned_posts)) {
+            $existing_scanned_posts = array();
+        }
+
+        $post_id = $scanned_post['id'];
+        $found = false;
+
+        foreach ($existing_scanned_posts as $idx => $p) {
+            if ($p['id'] === $post_id) {
+                $existing_scanned_posts[$idx] = $scanned_post;
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
+            $existing_scanned_posts[] = $scanned_post;
+        }
+
+        return $this->analyze($existing_scanned_posts);
+    }
+
+    /**
+     * Incrementally remove a deleted or trashed post from the dataset
+     *
+     * @param array $existing_scanned_posts Scanned posts raw list
+     * @param int $post_id ID of post being deleted
+     * @return array Updated full analysis report
+     */
+    public function remove_single_post($existing_scanned_posts, $post_id) {
+        if (!is_array($existing_scanned_posts)) {
+            return $this->analyze(array());
+        }
+
+        $filtered = array();
+        foreach ($existing_scanned_posts as $p) {
+            if ($p['id'] !== $post_id) {
+                $filtered[] = $p;
+            }
+        }
+
+        return $this->analyze($filtered);
+    }
+
+    /**
+     * Get human-friendly label for a post type
+     */
+    public function get_post_type_label($post_type) {
+        $labels = array(
+            'post'    => 'نوشته',
+            'page'    => 'برگه',
+            'product' => 'محصول',
+        );
+
+        if (isset($labels[$post_type])) {
+            return $labels[$post_type];
+        }
+
+        if (function_exists('get_post_type_object')) {
+            $obj = get_post_type_object($post_type);
+            if ($obj && !empty($obj->labels->singular_name)) {
+                return $obj->labels->singular_name;
+            }
+        }
+
+        return ucfirst($post_type);
     }
 
     private function get_empty_summary() {
@@ -245,6 +333,7 @@ class EX_SEO_Cluster_Analyzer {
             'pillars_count'        => 0,
             'clusters_count'       => 0,
             'categories_count'     => 0,
+            'post_types'           => array(),
             'scan_time'            => '',
         );
     }

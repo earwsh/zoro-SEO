@@ -122,9 +122,26 @@ class EX_SEO_Cluster_Scanner {
         $title = isset($post->post_title) ? $post->post_title : '';
         $permalink = function_exists('get_permalink') && $post_id ? get_permalink($post_id) : (isset($post->guid) ? $post->guid : '');
         $normalized_permalink = $this->normalize_url($permalink);
+        $post_type = isset($post->post_type) ? $post->post_type : 'post';
+
+        // Check for Elementor content in post meta
+        if ($post_id && function_exists('get_post_meta')) {
+            $elementor_data = get_post_meta($post_id, '_elementor_data', true);
+            if (!empty($elementor_data)) {
+                $elementor_html = $this->extract_content_from_elementor($elementor_data);
+                if (!empty($elementor_html)) {
+                    $content .= "\n" . $elementor_html;
+                }
+            }
+        }
+
+        // Expand safe shortcodes if present
+        if (!empty($content) && function_exists('do_shortcode') && strpos($content, '[') !== false) {
+            $content = do_shortcode($content);
+        }
 
         $word_count = $this->calculate_word_count($content);
-        $categories = $this->get_post_categories($post_id);
+        $categories = $this->get_post_categories($post_id, $post_type);
 
         $outlinks = array();
 
@@ -137,6 +154,7 @@ class EX_SEO_Cluster_Scanner {
             'title'                => $title,
             'url'                  => $permalink,
             'normalized_url'       => $normalized_permalink,
+            'post_type'            => $post_type,
             'word_count'           => $word_count,
             'categories'           => $categories,
             'publish_date'         => isset($post->post_date) ? $post->post_date : '',
@@ -272,22 +290,139 @@ class EX_SEO_Cluster_Scanner {
     }
 
     /**
-     * Get post category names
+     * Get post category or taxonomy names based on post type
      */
-    private function get_post_categories($post_id) {
-        if (!$post_id || !function_exists('get_the_category')) {
-            return array();
+    public function get_post_categories($post_id, $post_type = 'post') {
+        if (!$post_id) {
+            return array('عمومی');
         }
 
-        $cats = get_the_category($post_id);
-        if (empty($cats) || is_wp_error($cats)) {
-            return array('دسته‌بندی‌نشده');
+        if ($post_type === 'page') {
+            return array('برگه‌های سایت');
+        }
+
+        // Determine relevant taxonomies for this post type
+        $taxonomies = array();
+        if ($post_type === 'post') {
+            $taxonomies = array('category');
+        } elseif ($post_type === 'product') {
+            $taxonomies = array('product_cat');
+        } else {
+            // For custom post types, dynamically discover hierarchical public taxonomies
+            if (function_exists('get_object_taxonomies')) {
+                $all_tax = get_object_taxonomies($post_type, 'objects');
+                if (is_array($all_tax)) {
+                    foreach ($all_tax as $tax_name => $tax_obj) {
+                        if (!empty($tax_obj->hierarchical) && !empty($tax_obj->public)) {
+                            $taxonomies[] = $tax_name;
+                        }
+                    }
+                }
+            }
+            if (empty($taxonomies)) {
+                $taxonomies = array('category');
+            }
         }
 
         $names = array();
-        foreach ($cats as $cat) {
-            $names[] = $cat->name;
+        if (function_exists('get_the_terms')) {
+            foreach ($taxonomies as $taxonomy) {
+                $terms = get_the_terms($post_id, $taxonomy);
+                if ($terms && !is_wp_error($terms)) {
+                    foreach ($terms as $t) {
+                        $names[] = $t->name;
+                    }
+                }
+            }
         }
-        return $names;
+
+        // Fallback for standard posts if get_the_terms returned nothing
+        if (empty($names) && function_exists('get_the_category') && $post_type === 'post') {
+            $cats = get_the_category($post_id);
+            if ($cats && !is_wp_error($cats)) {
+                foreach ($cats as $c) {
+                    $names[] = $c->name;
+                }
+            }
+        }
+
+        if (empty($names)) {
+            return array($post_type === 'post' ? 'دسته‌بندی‌نشده' : ($post_type === 'product' ? 'محصولات' : ucfirst($post_type)));
+        }
+
+        return array_values(array_unique($names));
+    }
+
+    /**
+     * Extract HTML and links from Elementor builder JSON data
+     */
+    public function extract_content_from_elementor($elementor_data) {
+        if (is_string($elementor_data)) {
+            $data = json_decode($elementor_data, true);
+        } else {
+            $data = $elementor_data;
+        }
+
+        if (!is_array($data)) {
+            return '';
+        }
+
+        $html_pieces = array();
+        $this->parse_elementor_elements($data, $html_pieces);
+        return implode("\n", $html_pieces);
+    }
+
+    /**
+     * Recursively traverse Elementor elements array to extract text and links
+     */
+    private function parse_elementor_elements($elements, &$html_pieces) {
+        if (!is_array($elements)) {
+            return;
+        }
+
+        foreach ($elements as $el) {
+            if (isset($el['settings']) && is_array($el['settings'])) {
+                $settings = $el['settings'];
+
+                // 1. Text Editor widget content
+                if (!empty($settings['editor']) && is_string($settings['editor'])) {
+                    $html_pieces[] = $settings['editor'];
+                }
+
+                // 2. Heading, Button, Call to Action, Icon Box with URL settings
+                if (!empty($settings['link']) && is_array($settings['link']) && !empty($settings['link']['url'])) {
+                    $url = $settings['link']['url'];
+                    $text = '';
+                    if (!empty($settings['text']) && is_string($settings['text'])) {
+                        $text = $settings['text'];
+                    } elseif (!empty($settings['title']) && is_string($settings['title'])) {
+                        $text = $settings['title'];
+                    } elseif (!empty($settings['title_text']) && is_string($settings['title_text'])) {
+                        $text = $settings['title_text'];
+                    } else {
+                        $text = '[پیوند المنتور]';
+                    }
+                    $rel = !empty($settings['link']['is_external']) ? 'rel="external' : 'rel="';
+                    $rel .= !empty($settings['link']['nofollow']) ? ' nofollow"' : '"';
+                    $html_pieces[] = sprintf('<p><a href="%s" %s>%s</a></p>', htmlspecialchars($url, ENT_QUOTES, 'UTF-8'), $rel, htmlspecialchars($text, ENT_QUOTES, 'UTF-8'));
+                }
+
+                // 3. Icon list widget items
+                if (!empty($settings['icon_list']) && is_array($settings['icon_list'])) {
+                    foreach ($settings['icon_list'] as $item) {
+                        if (!empty($item['link']) && is_array($item['link']) && !empty($item['link']['url'])) {
+                            $item_text = !empty($item['text']) ? $item['text'] : '[آیتم لیست المنتور]';
+                            $rel = !empty($item['link']['nofollow']) ? 'rel="nofollow"' : '';
+                            $html_pieces[] = sprintf('<p><a href="%s" %s>%s</a></p>', htmlspecialchars($item['link']['url'], ENT_QUOTES, 'UTF-8'), $rel, htmlspecialchars($item_text, ENT_QUOTES, 'UTF-8'));
+                        }
+                    }
+                }
+            }
+
+            // Recurse into child elements (containers, sections, columns)
+            if (!empty($el['elements']) && is_array($el['elements'])) {
+                $this->parse_elementor_elements($el['elements'], $html_pieces);
+            }
+        }
     }
 }

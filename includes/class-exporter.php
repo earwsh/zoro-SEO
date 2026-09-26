@@ -31,6 +31,7 @@ class EX_SEO_Cluster_Exporter {
         $headers = array(
             'شناسه',
             'عنوان مقاله',
+            'نوع محتوا',
             'آدرس مقاله (URL)',
             'دسته‌بندی‌ها',
             'نقش در ساختار پیلار-کلاستر',
@@ -45,6 +46,7 @@ class EX_SEO_Cluster_Exporter {
 
         foreach ($posts as $p) {
             $categories_str = !empty($p['categories']) ? implode(' | ', $p['categories']) : 'دسته‌بندی‌نشده';
+            $post_type_name = isset($p['post_type_label']) ? $p['post_type_label'] : (isset($p['post_type']) ? $p['post_type'] : 'نوشته');
             
             // Build top anchor texts string
             $top_anchors = array();
@@ -61,6 +63,7 @@ class EX_SEO_Cluster_Exporter {
             $row = array(
                 $p['id'],
                 $p['title'],
+                $post_type_name,
                 $p['url'],
                 $categories_str,
                 isset($p['role_label']) ? $p['role_label'] : $p['role'],

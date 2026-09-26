@@ -1,16 +1,18 @@
 <?php
 /**
- * Admin Dashboard View for EX SEO Cluster
+ * Admin Dashboard View for Zoro SEO
  */
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-$summary = isset($data['summary']) ? $data['summary'] : array();
-$posts = isset($data['posts']) ? $data['posts'] : array();
-$categories = isset($data['categories']) ? $data['categories'] : array();
-$has_data = !empty($posts);
+$summary              = isset($data['summary']) ? $data['summary'] : array();
+$posts                = isset($data['posts']) ? $data['posts'] : array();
+$categories           = isset($data['categories']) ? $data['categories'] : array();
+$has_data             = !empty($posts);
+$allowed_post_types   = isset($allowed_post_types) ? $allowed_post_types : array('post', 'page');
+$available_post_types = isset($available_post_types) ? $available_post_types : array('post' => array('label' => 'نوشته‌ها', 'slug' => 'post'));
 ?>
 
 <div class="wrap ex-seo-cluster-wrap">
@@ -21,7 +23,7 @@ $has_data = !empty($posts);
                 <span style="color: #2271b1; font-weight: 800;">Zoro SEO</span>
                 <span style="font-size: 16px; color: #64748b; font-weight: 500;">| تحلیل پیلار-کلاستر و شبکه لینک‌های داخلی</span>
             </h1>
-            <p>استخراج ساختار موضوعی، کشف صفحات یتیم (Orphan Pages) و راهنمای لینک‌سازی برای تدوین تقویم محتوای ماهانه</p>
+            <p>استخراج ساختار موضوعی، کشف صفحات یتیم (Orphan Pages)، پشتیبانی از نوشته‌ها، برگه‌ها، محصولات و المنتور جهت تدوین استراتژی لینک‌سازی</p>
         </div>
         <div class="ex-seo-cluster-actions">
             <?php if ($has_data): ?>
@@ -41,6 +43,29 @@ $has_data = !empty($posts);
         </div>
     </div>
 
+    <!-- Post Types Configuration Bar -->
+    <div class="zoro-settings-card">
+        <div class="zoro-settings-title">
+            <span class="dashicons dashicons-admin-settings"></span>
+            <strong>انتخاب انواع محتوا برای اسکن و تحلیل (Post Types):</strong>
+        </div>
+        <div class="zoro-post-types-selection" id="zoro-post-types-container">
+            <?php foreach ($available_post_types as $slug => $info): ?>
+                <label class="zoro-checkbox-label">
+                    <input type="checkbox" name="zoro_post_types[]" value="<?php echo esc_attr($slug); ?>" 
+                        <?php checked(in_array($slug, $allowed_post_types, true)); ?> />
+                    <span><?php echo esc_html($info['label']); ?> (<code><?php echo esc_html($slug); ?></code>)</span>
+                </label>
+            <?php endforeach; ?>
+            <button type="button" id="zoro-btn-save-settings" class="button button-secondary button-small" style="margin-right: 15px;">
+                ذخیره تنظیمات انواع محتوا
+            </button>
+            <span id="zoro-settings-saved-feedback" style="display: none; color: #16a34a; font-weight: 600; font-size: 13px; margin-right: 8px;">
+                ✓ ذخیره شد
+            </span>
+        </div>
+    </div>
+
     <!-- Scan Progress Box (Hidden by default) -->
     <div id="ex-seo-scan-progress" class="ex-seo-scan-progress-box" style="display: none;">
         <div class="ex-seo-scan-status-text">
@@ -54,7 +79,7 @@ $has_data = !empty($posts);
 
     <?php if (!$has_data): ?>
         <!-- Empty State Prompt -->
-        <div class="notice notice-info" style="padding: 24px; border-radius: 8px;">
+        <div class="notice notice-info" style="padding: 24px; border-radius: 8px; margin-top: 20px;">
             <h3 style="margin-top:0;">هنوز داده‌ای اسکن نشده است</h3>
             <p>برای استخراج پیوندها، شناخت پیلارها و کشف صفحات یتیم سایتتان، روی دکمه <strong>«آغاز اولین اسکن وبسایت»</strong> کلیک کنید.</p>
         </div>
@@ -67,8 +92,19 @@ $has_data = !empty($posts);
                     <span class="dashicons dashicons-admin-post"></span>
                 </div>
                 <div class="ex-seo-stat-content">
-                    <h3><?php echo number_format_i18n($summary['total_posts']); ?></h3>
-                    <p>کل مقالات بررسی‌شده</p>
+                    <h3><?php echo number_format_i18n(isset($summary['total_posts']) ? $summary['total_posts'] : count($posts)); ?></h3>
+                    <p>کل محتوای بررسی‌شده</p>
+                    <?php if (!empty($summary['post_types'])): ?>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px;">
+                            <?php 
+                                $pt_labels = array();
+                                foreach ($summary['post_types'] as $pt_k => $pt_v) {
+                                    $pt_labels[] = esc_html($pt_k) . ': ' . esc_html($pt_v);
+                                }
+                                echo implode(' | ', $pt_labels);
+                            ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -77,7 +113,7 @@ $has_data = !empty($posts);
                     <span class="dashicons dashicons-admin-links"></span>
                 </div>
                 <div class="ex-seo-stat-content">
-                    <h3><?php echo number_format_i18n($summary['total_internal_links']); ?></h3>
+                    <h3><?php echo number_format_i18n(isset($summary['total_internal_links']) ? $summary['total_internal_links'] : 0); ?></h3>
                     <p>کل لینک‌های داخلی کشف‌شده</p>
                 </div>
             </div>
@@ -87,7 +123,7 @@ $has_data = !empty($posts);
                     <span class="dashicons dashicons-warning"></span>
                 </div>
                 <div class="ex-seo-stat-content">
-                    <h3 style="color: #dc2626;"><?php echo number_format_i18n($summary['orphans_count']); ?></h3>
+                    <h3 style="color: #dc2626;"><?php echo number_format_i18n(isset($summary['orphans_count']) ? $summary['orphans_count'] : 0); ?></h3>
                     <p>صفحات یتیم (بدون ورودی)</p>
                 </div>
             </div>
@@ -97,7 +133,7 @@ $has_data = !empty($posts);
                     <span class="dashicons dashicons-star-filled"></span>
                 </div>
                 <div class="ex-seo-stat-content">
-                    <h3><?php echo number_format_i18n($summary['pillars_count']); ?></h3>
+                    <h3><?php echo number_format_i18n(isset($summary['pillars_count']) ? $summary['pillars_count'] : 0); ?></h3>
                     <p>ستون‌های محتوا (Pillars)</p>
                 </div>
             </div>
@@ -107,8 +143,8 @@ $has_data = !empty($posts);
                     <span class="dashicons dashicons-chart-pie"></span>
                 </div>
                 <div class="ex-seo-stat-content">
-                    <h3><?php echo esc_html($summary['avg_links_per_post']); ?></h3>
-                    <p>میانگین لینک در هر مقاله</p>
+                    <h3><?php echo esc_html(isset($summary['avg_links_per_post']) ? $summary['avg_links_per_post'] : 0); ?></h3>
+                    <p>میانگین لینک در هر مطلب</p>
                 </div>
             </div>
         </div>
@@ -124,7 +160,7 @@ $has_data = !empty($posts);
                         <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; background: #f8fafc;">
                             <div style="font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px;">
                                 <?php echo esc_html($cat['name']); ?>
-                                <span style="font-size: 12px; color: #64748b; font-weight: normal; float: left;">(<?php echo esc_html($cat['posts_count']); ?> مقاله)</span>
+                                <span style="font-size: 12px; color: #64748b; font-weight: normal; float: left;">(<?php echo esc_html($cat['posts_count']); ?> مطلب)</span>
                             </div>
                             <div style="font-size: 12.5px; color: #475569; line-height: 1.8;">
                                 <div>تعداد لینک‌های داخلی: <strong><?php echo esc_html($cat['total_inlinks']); ?></strong></div>
@@ -148,8 +184,25 @@ $has_data = !empty($posts);
         <!-- Table Filters & Search -->
         <div class="ex-seo-controls">
             <div class="ex-seo-filters">
-                <input type="text" id="ex-seo-search-input" placeholder="جستجو بر اساس عنوان یا آدرس مقاله..." />
+                <input type="text" id="ex-seo-search-input" placeholder="جستجو بر اساس عنوان یا آدرس مطلب..." />
                 
+                <!-- Post Type Filter -->
+                <select id="ex-seo-post-type-filter">
+                    <option value="all">تمام انواع محتوا</option>
+                    <?php 
+                        $distinct_types = array();
+                        foreach ($posts as $p) {
+                            $t = isset($p['post_type']) ? $p['post_type'] : 'post';
+                            $l = isset($p['post_type_label']) ? $p['post_type_label'] : $t;
+                            $distinct_types[$t] = $l;
+                        }
+                        foreach ($distinct_types as $t_slug => $t_label):
+                    ?>
+                        <option value="<?php echo esc_attr($t_slug); ?>"><?php echo esc_html($t_label); ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <!-- Category Filter -->
                 <select id="ex-seo-category-filter">
                     <option value="all">تمام دسته‌بندی‌ها</option>
                     <?php foreach ($categories as $cat): ?>
@@ -157,6 +210,7 @@ $has_data = !empty($posts);
                     <?php endforeach; ?>
                 </select>
 
+                <!-- Role Filter -->
                 <select id="ex-seo-role-filter">
                     <option value="all">تمام نقش‌ها</option>
                     <option value="pillar">فقط پیلارها (ستون محتوا)</option>
@@ -167,7 +221,7 @@ $has_data = !empty($posts);
             </div>
 
             <div style="font-size: 13px; color: #64748b;">
-                نمایش <strong><?php echo count($posts); ?></strong> مقاله
+                نمایش <strong><?php echo count($posts); ?></strong> مطلب
             </div>
         </div>
 
@@ -176,7 +230,7 @@ $has_data = !empty($posts);
             <table class="ex-seo-table">
                 <thead>
                     <tr>
-                        <th style="width: 32%;">عنوان مقاله و پیوند</th>
+                        <th style="width: 32%;">عنوان و پیوند</th>
                         <th style="width: 14%;">دسته‌بندی</th>
                         <th style="width: 12%;">نقش در کلاستر</th>
                         <th style="width: 9%; text-align: center;">لینک ورودی</th>
@@ -189,6 +243,8 @@ $has_data = !empty($posts);
                     <?php foreach ($posts as $p): ?>
                         <?php
                             $cat_string = !empty($p['categories']) ? implode(', ', $p['categories']) : '';
+                            $p_type     = isset($p['post_type']) ? $p['post_type'] : 'post';
+                            $p_type_lbl = isset($p['post_type_label']) ? $p['post_type_label'] : 'نوشته';
                             $first_anchor = '';
                             if (!empty($p['anchor_distribution'])) {
                                 $anchors_keys = array_keys($p['anchor_distribution']);
@@ -197,11 +253,17 @@ $has_data = !empty($posts);
                         ?>
                         <tr data-title="<?php echo esc_attr($p['title']); ?>"
                             data-category="<?php echo esc_attr($cat_string); ?>"
-                            data-role="<?php echo esc_attr($p['role']); ?>">
+                            data-role="<?php echo esc_attr($p['role']); ?>"
+                            data-post-type="<?php echo esc_attr($p_type); ?>">
                             <td class="ex-seo-post-title-cell">
-                                <a href="<?php echo esc_url($p['url']); ?>" target="_blank" title="مشاهده مقاله در تب جدید">
-                                    <?php echo esc_html($p['title']); ?>
-                                </a>
+                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <span class="badge-post-type badge-type-<?php echo esc_attr($p_type); ?>">
+                                        <?php echo esc_html($p_type_lbl); ?>
+                                    </span>
+                                    <a href="<?php echo esc_url($p['url']); ?>" target="_blank" title="مشاهده مطلب در تب جدید" style="font-weight: 600;">
+                                        <?php echo esc_html($p['title']); ?>
+                                    </a>
+                                </div>
                                 <span class="ex-seo-post-meta">
                                     کلمات: <?php echo number_format_i18n($p['word_count']); ?> | ارجاع‌دهندگان: <?php echo esc_html($p['unique_referring_count']); ?>
                                 </span>
@@ -244,16 +306,16 @@ $has_data = !empty($posts);
     <div id="ex-seo-modal" class="ex-seo-modal-overlay" style="display: none;">
         <div class="ex-seo-modal-content">
             <div class="ex-seo-modal-header">
-                <h2 id="ex-seo-modal-post-title">جزئیات لینک‌های مقاله</h2>
+                <h2 id="ex-seo-modal-post-title">جزئیات لینک‌های مطلب</h2>
                 <button type="button" class="ex-seo-modal-close">&times;</button>
             </div>
             <div class="ex-seo-modal-body">
                 <div class="ex-seo-modal-tabs">
                     <button type="button" class="ex-seo-modal-tab-btn active" data-tab="inlinks">
-                        لینک‌های ورودی به این مقاله <span id="modal-tab-inlinks-count"></span>
+                        لینک‌های ورودی به این مطلب <span id="modal-tab-inlinks-count"></span>
                     </button>
                     <button type="button" class="ex-seo-modal-tab-btn" data-tab="outlinks">
-                        لینک‌های خروجی از این مقاله <span id="modal-tab-outlinks-count"></span>
+                        لینک‌های خروجی از این مطلب <span id="modal-tab-outlinks-count"></span>
                     </button>
                 </div>
                 <div id="ex-seo-tab-inlinks" class="ex-seo-modal-tab-pane">
